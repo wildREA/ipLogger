@@ -6,14 +6,30 @@
     <title>IP Logger</title>
 </head>
 <body>
-    <h1>Your IP Address is being captured</h1>
+    <h1>Your Local IP Address is being captured</h1>
     <script>
-        fetch('https://api.ipify.org?format=json')
-            .then(response => response.json())
-            .then(data => {
-                console.log("Your IP Address:", data.ip);
-                // Send the IP address to your server or log it as needed
+        async function getLocalIP() {
+            return new Promise((resolve, reject) => {
+                const peerConnection = new RTCPeerConnection({ iceServers: [] });
+                peerConnection.createDataChannel("");
+                peerConnection.createOffer().then(offer => peerConnection.setLocalDescription(offer));
+
+                peerConnection.onicecandidate = event => {
+                    if (!event || !event.candidate) return;
+                    const ipMatch = event.candidate.candidate.match(/\b(\d{1,3}\.){3}\d{1,3}\b/);
+                    if (ipMatch) {
+                        resolve(ipMatch[0]);
+                        peerConnection.close();
+                    }
+                };
+
+                setTimeout(() => reject("Failed to fetch LAN IP"), 5000);
             });
+        }
+
+        getLocalIP()
+            .then(ip => console.log("Your Local IP Address:", ip))
+            .catch(error => console.error(error));
     </script>
 </body>
 </html>
